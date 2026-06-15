@@ -1,0 +1,12 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: main
+    tables:
+      - name: BBDD_patients
+      - name: BBDD_doctors
+      - name: BBDD_appointments
+      - name: BBDD_events
+      - name: BBDD_reviews
+      - name: map_status

@@ -1,0 +1,231 @@
+version: 2
+
+models:
+  - name: stg_patients
+    description: "Staging model for patients"
+    columns:
+      - name: patient_id
+        description: "The primary key for this table"
+        data_tests:
+          - unique
+          - not_null
+
+  - name: stg_doctors
+    description: "Staging model for doctors"
+    columns:
+      - name: doctor_id
+        description: "The primary key for this table"
+        data_tests:
+          - unique
+          - not_null
+
+  - name: stg_appointments
+    description: "Staging model for appointments"
+    columns:
+      - name: appointment_id
+        description: "The primary key for this table"
+        data_tests:
+          - unique
+          - not_null
+      - name: status
+        description: "Normalized appointment status"
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['booked', 'completed', 'cancelled', 'no_show']
+
+      - name: patient_id
+        description: "FK to patients"
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_patients')
+              field: patient_id
+
+      - name: doctor_id
+        description: "FK to doctors"
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_doctors')
+              field: doctor_id
+
+      - name: scheduled_at
+        description: "Date the appointment is/was scheduled for"
+        data_tests:
+          - not_null
+
+      - name: created_at
+        description: "Date the appointment record was created"
+        data_tests:
+          - not_null
+
+    data_tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "created_at <= scheduled_at"
+
+  - name: stg_reviews
+    description: "Staging model for reviews"
+    columns:
+      - name: review_id
+        description: "The primary key for this table"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: appointment_id
+        description: "FK to appointments"
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_appointments')
+              field: appointment_id
+
+      - name: rating
+        description: "Review rating"
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4, 5]
+
+  - name: stg_events
+    description: "Staging model for events"
+    columns:
+      - name: event_id
+        description: "The primary key for this table"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: patient_id
+        description: "FK to patients"
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_patients')
+              field: patient_id
+
+      - name: event_type
+        description: "Type of event"
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['search', 'view_doctor', 'book_appointment']
+
+      - name: event_timestamp
+        description: "Timestamp of the event"
+        data_tests:
+          - not_null
+
+  - name: fct_reviews
+    description: "Fact table at review grain"
+    columns:
+      - name: review_id
+        data_tests:
+          - unique
+          - not_null
+
+      - name: appointment_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('fct_appointments')
+              field: appointment_id
+
+      - name: rating
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4, 5]
+
+  - name: fct_appointments
+    description: "Fact table at appointment grain"
+    columns:
+      - name: appointment_id
+        data_tests:
+          - unique
+          - not_null
+
+      - name: patient_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_patients')
+              field: patient_id
+
+      - name: doctor_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_doctors')
+              field: doctor_id
+
+      - name: date_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_fecha')
+              field: date_id
+
+      - name: scheduled_at
+        data_tests:
+          - not_null
+
+      - name: created_at
+        data_tests:
+          - not_null
+
+    data_tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "created_at <= scheduled_at"
+
+  - name: dim_fecha
+    description: "Date dimension, 1 row per day"
+    columns:
+      - name: date_id
+        data_tests:
+          - unique
+          - not_null
+      - name: fecha
+        data_tests:
+          - unique
+          - not_null
+  - name: fct_events
+    description: "Fact table at event grain"
+    columns:
+      - name: event_id
+        data_tests:
+          - unique
+          - not_null
+
+      - name: patient_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_patients')
+              field: patient_id
+
+      - name: event_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['search', 'view_doctor', 'book_appointment']
+
+      - name: event_timestamp
+        data_tests:
+          - not_null
+  - name: dim_patients
+    columns:
+      - name: patient_id
+        data_tests:
+          - unique
+          - not_null
+
+  - name: dim_doctors
+    columns:
+      - name: doctor_id
+        data_tests:
+          - unique
+          - not_null
